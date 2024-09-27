@@ -315,7 +315,8 @@ class RankAllocator(object):
             for n,p in model.named_parameters():
                 if "lora_E" in n: 
                     p.data.masked_fill_(is_dict[n]<=mask_threshold, 0.0) # zero out the unimportant singular values
-                    ranknum = (is_dict[n]>mask_threshold).sum().item() 
+                    # === ranknum (# non-zero singular values) is changed, but the shape of the parameter tensor `p` is not changed
+                    ranknum = (is_dict[n]>mask_threshold).sum().item()
 
                     if self.tb_writter is not None and self.global_step%self.log_interval==0:
                         self.tb_writter.add_scalar("Ranknum/%s"%(n,), ranknum, self.global_step) 
