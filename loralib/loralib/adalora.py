@@ -34,6 +34,7 @@ class SVDLinear(nn.Linear, LoRALayer):
             self.lora_A = nn.Parameter(
                 self.weight.new_zeros((r, in_features))
             )
+            # === E: singular values
             self.lora_E = nn.Parameter(
                 self.weight.new_zeros(r, 1)
             ) 
@@ -44,6 +45,8 @@ class SVDLinear(nn.Linear, LoRALayer):
                 self.weight.new_zeros(1), requires_grad=False
             )
             self.ranknum.data.fill_(float(self.r))
+            # === In original LoRA, self.scaling = self.lora_alpha / self.r
+            # AdaLoRA divides the scaling by the ranknum (in train and eval) to ensure the same scale
             self.scaling = self.lora_alpha if self.lora_alpha>0 else float(self.r)   
             # Freezing the pre-trained weight matrix
             self.weight.requires_grad = False
@@ -67,6 +70,13 @@ class SVDLinear(nn.Linear, LoRALayer):
         nn.Linear.train(self, mode)
         if self.merge_weights and self.merged:
             # Make sure that the weights are not merged
+            # === A: left singular vectors
+            # B: right singular vectors
+            # E: singular values
+            # ranknum: the rank of the current layer
+            # 1e-5 is added to avoid division by zero
+            # scaling is adjusted by the ranknum to ensure the same scale
+            # B @ (A * E) mimics the SVD reconstruction of the weight matrix
             if self.r > 0:
                 self.weight.data -= T(
                     self.lora_B @ (self.lora_A*self.lora_E)
@@ -103,6 +113,10 @@ class RankAllocator(object):
     """
     The RankAllocator for AdaLoRA Model that will be called every training step. 
     Paper: https://openreview.net/pdf?id=lq62uWRJjiY
+
+    === AdaLoRA modified the source code of Trainer class in huggingface/transformers to call the RankAllocator
+    === every training step. The RankAllocator will update the importance scores and mask out the unimportant
+    === singular values in the SVDLinear layers.
 
     Args:
         model: the model that we apply AdaLoRA to.
@@ -172,6 +186,9 @@ class RankAllocator(object):
         self.shape_dict = {}
         for n,p in self.model.named_parameters():
             if "lora_A" in n: 
+                # === layer1.lora_A, layer2.lora_A, ...
+                # are replaced by layer1.%s, layer2.%s, ...
+                # to create a set of name patterns that can be used to refer to both lora_A and lora_B for each layer
                 name_mat = n.replace("lora_A", "%s")
                 self.name_set.add(name_mat)
                 self.total_rank += p.size(0) 
@@ -218,6 +235,8 @@ class RankAllocator(object):
                     self.exp_avg_unc[n] = torch.zeros_like(p) 
                 with torch.no_grad():
                     # Calculate sensitivity 
+                    # === p.grad is the gradient of the loss w.r.t. p
+                    # detach() is used to avoid backpropagation
                     self.ipt[n] = (p * p.grad).abs().detach()
                     # Update sensitivity 
                     self.exp_avg_ipt[n] = self.beta1 * self.exp_avg_ipt[n] + \
@@ -242,14 +261,16 @@ class RankAllocator(object):
         return sum_ipt
 
     def mask_to_target_rank(self, model, curr_rank): 
-        is_dict = {}
-        combine_dict = {} 
-        singular_dict = {}
+        is_dict = {} # Importance score dictionary
+        combine_dict = {} # Combine importance score dictionary
+        singular_dict = {} # Singular value dictionary
         # Calculate the importance score for each sub matrix 
         for n,p in model.named_parameters(): 
             if "lora_A" in n: 
+                # === shape of lora_A: (hdim, rdim)
                 rdim, hdim_a = p.shape
                 ipt_score = self.calculate_score(n, metric="ipt")
+                # === shape of combined importance score: (hdim, 1)
                 comb_ipt = torch.mean(ipt_score, dim=1, keepdim=True)
                 name_mat = n.replace("lora_A", "%s")
                 if name_mat not in combine_dict: 
@@ -257,8 +278,11 @@ class RankAllocator(object):
                 else:
                     combine_dict[name_mat].append(comb_ipt)
             if "lora_B" in n: 
+                # === shape of lora_B: (rdim, hdim)
                 hdim_b, rdim = p.shape 
                 ipt_score = self.calculate_score(n, metric="ipt")
+                # === shape of combined importance score: (1, hdim)
+                # view(-1, 1) means reshaping the tensor to (hdim, 1)
                 comb_ipt = torch.mean(ipt_score, dim=0, keepdim=False).view(-1, 1)
                 name_mat = n.replace("lora_B", "%s")
                 if name_mat not in combine_dict: 
@@ -280,7 +304,8 @@ class RankAllocator(object):
             is_dict[name_E] = sum_ipt.view(-1, 1)
             all_is.append(sum_ipt.view(-1))
 
-        # Calculate the masking threshold 
+        # Calculate the masking threshold
+        # === k is determined by (self.total_rank-curr_rank)
         mask_threshold = torch.kthvalue(torch.cat(all_is), (self.total_rank-curr_rank))[0].item()
 
         # Mask out unimportant singular values 
@@ -289,7 +314,7 @@ class RankAllocator(object):
             sum_param = 0
             for n,p in model.named_parameters():
                 if "lora_E" in n: 
-                    p.data.masked_fill_(is_dict[n]<=mask_threshold, 0.0)
+                    p.data.masked_fill_(is_dict[n]<=mask_threshold, 0.0) # zero out the unimportant singular values
                     ranknum = (is_dict[n]>mask_threshold).sum().item() 
 
                     if self.tb_writter is not None and self.global_step%self.log_interval==0:
