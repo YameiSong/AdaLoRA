@@ -9,7 +9,7 @@ pandas
 requests
 sentencepiece==0.1.96 
 scikit-learn
-scipy==1.7.0 
+scipy
 absl-py==1.0.0 
 tensorflow==2.9.1
 wrapt==1.12.1 
