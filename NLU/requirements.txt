@@ -12,7 +12,7 @@ scikit-learn
 scipy
 absl-py==1.0.0 
 tensorflow==2.9.1
-wrapt==1.12.1 
+wrapt==1.14.0 
 mlflow
 tensorboardX
 azureml-defaults 
