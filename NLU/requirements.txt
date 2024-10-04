@@ -8,7 +8,7 @@ importlib-metadata==4.6.1
 pandas
 requests
 sentencepiece==0.1.96 
-scikit-learn==1.0.2
+scikit-learn
 scipy==1.7.0 
 absl-py==1.0.0 
 tensorflow==2.9.1
