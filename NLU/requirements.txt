@@ -2,7 +2,7 @@ numpy==1.20.2
 tqdm==4.61.2
 accelerate==0.3.0 
 datasets==2.21.0 
-deepspeed==0.8.0
+# deepspeed==0.5.0
 dill==0.3.4 
 importlib-metadata==4.6.1 
 pandas
