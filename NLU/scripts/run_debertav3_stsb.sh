@@ -1,5 +1,5 @@
 python -m torch.distributed.launch --master_port=8679 --nproc_per_node=1 \
-examples/text-classification/run_glue.py \
+../examples/text-classification/run_glue.py \
 --model_name_or_path microsoft/deberta-v3-base \
 --task_name stsb \
 --apply_lora --apply_adalora --lora_type svd \
