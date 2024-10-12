@@ -23,7 +23,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-import loralib as lora 
+import adaloralib as lora 
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (

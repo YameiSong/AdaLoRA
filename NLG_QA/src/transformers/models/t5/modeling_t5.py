@@ -25,7 +25,7 @@ import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from torch.utils.checkpoint import checkpoint
-import loralib as lora 
+import adaloralib as lora 
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (

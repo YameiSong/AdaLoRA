@@ -53,7 +53,7 @@ from transformers import (
 )
 from transformers.utils import get_full_repo_name, is_offline_mode, send_example_telemetry
 from transformers.utils.versions import require_version
-from loralib import RankAllocator 
+from adaloralib import RankAllocator 
 
 try:
     from torch.utils.tensorboard import SummaryWriter

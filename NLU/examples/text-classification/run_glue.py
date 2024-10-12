@@ -27,6 +27,7 @@ from typing import Optional
 
 import numpy as np
 from datasets import load_dataset, load_metric
+import evaluate
 
 import transformers
 from transformers import (
@@ -44,7 +45,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from loralib import RankAllocator 
+from adaloralib import RankAllocator 
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -123,12 +124,13 @@ class DataTrainingArguments:
         },
     )
     train_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the training data."}
+        default=None, metadata={"help": "A csv/json/parquet file containing the training data."}
     )
     validation_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the validation data."}
+        default=None, metadata={"help": "A csv/json/parquet file containing the validation data."}
     )
-    test_file: Optional[str] = field(default=None, metadata={"help": "A csv or a json file containing the test data."})
+    test_file: Optional[str] = field(default=None, metadata={"help": "A csv/json/parquet file containing the test data."})
+    metric_file: Optional[str] = field(default=None, metadata={"help": "A py file to compute the metric for the task."})
 
     def __post_init__(self):
         if self.task_name is not None:
@@ -139,7 +141,7 @@ class DataTrainingArguments:
             raise ValueError("Need either a GLUE task or a training/validation file.")
         else:
             train_extension = self.train_file.split(".")[-1]
-            assert train_extension in ["csv", "json"], "`train_file` should be a csv or a json file."
+            assert train_extension in ["csv", "json", "parquet"], "`train_file` should be a csv / json / parquet file."
             validation_extension = self.validation_file.split(".")[-1]
             assert (
                 validation_extension == train_extension
@@ -361,7 +363,7 @@ def main():
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
-    if data_args.task_name is not None:
+    if data_args.task_name is not None and data_args.train_file is None:
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset("glue", data_args.task_name)
     else:
@@ -388,6 +390,9 @@ def main():
         if data_args.train_file.endswith(".csv"):
             # Loading a dataset from local csv files
             datasets = load_dataset("csv", data_files=data_files)
+        elif data_args.train_file.endswith(".parquet"):
+            # Loading a dataset from local parquet files
+            datasets = load_dataset("parquet", data_files=data_files)
         else:
             # Loading a dataset from local json files
             datasets = load_dataset("json", data_files=data_files)
@@ -598,8 +603,12 @@ def main():
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
 
     # Get the metric function
-    if data_args.task_name is not None:
-        metric = load_metric("glue", data_args.task_name)
+    if data_args.task_name is not None and data_args.metric_file is None:
+        # metric = load_metric("glue", data_args.task_name)
+        metric = evaluate.load("glue", data_args.task_name)
+    else:
+        # metric = load_metric(data_args.metric_file, trust_remote_code=True)
+        metric = evaluate.load(data_args.metric_file, data_args.task_name)
     # TODO: When datasets metrics include regular accuracy, make an else here and remove special branch from
     # compute_metrics
 
@@ -720,11 +729,12 @@ def main():
 
         for test_dataset, task in zip(test_datasets, tasks):
             # Removing the `label` columns because it contains -1 and Trainer won't like that.
-            test_dataset.remove_columns_("label")
+            test_dataset = test_dataset.remove_columns("label")
             predictions = trainer.predict(test_dataset=test_dataset).predictions
             predictions = np.squeeze(predictions) if is_regression else np.argmax(predictions, axis=1)
 
             output_test_file = os.path.join(training_args.output_dir, f"test_results_{task}.txt")
+            logger.info(f"Saving test results to {output_test_file}")
             if trainer.is_world_process_zero():
                 with open(output_test_file, "w") as writer:
                     logger.info(f"***** Test results {task} *****")
