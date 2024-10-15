@@ -45,7 +45,7 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 from utils_qa import postprocess_qa_predictions
-from adaloralib import RankAllocator 
+from loralib import RankAllocator 
 
 try:
     from torch.utils.tensorboard import SummaryWriter

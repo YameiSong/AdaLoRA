@@ -14,7 +14,7 @@
 # limitations under the License.
 """ PyTorch DeBERTa-v2 model. """
 
-import adaloralib as lora
+import loralib as lora
 import math
 from collections.abc import Sequence
 
