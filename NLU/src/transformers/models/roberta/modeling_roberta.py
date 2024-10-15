@@ -16,7 +16,7 @@
 """PyTorch RoBERTa model. """
 
 from torch.nn.modules.container import ModuleDict
-import loralib as lora
+import adaloralib as lora
 
 import math
 

@@ -81,14 +81,14 @@ There are several directories in this repo:
  # layer = nn.Linear(in_features, out_features)
 
  # ===== After ======
- import loralib as lora
+ import adaloralib as lora
  # Add a pair of low-rank adaptation matrices with rank r=16
  layer = lora.Linear(in_features, out_features, r=16)
  ```
 
  3. Before the training loop begins, mark only LoRA parameters as trainable.
  ```
- import loralib as lora
+ import adaloralib as lora
  model = BigModel()
  # This sets requires_grad to False for all parameters without the string "lora_" in their names
  lora.mark_only_lora_as_trainable(model)

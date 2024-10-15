@@ -30,7 +30,7 @@ There are several directories in this repo:
   # layer = nn.Linear(in_features, out_features)
   
   # ===== After ======
-  import loralib 
+  import adaloralib 
   # Add a SVD-based adaptation matrices with rank r=12
   layer = loralib.SVDLinear(in_features, out_features, r=12)
   ```
@@ -44,8 +44,8 @@ There are several directories in this repo:
 
 3. During the training loop, we apply RankAllocator of AdaLoRA to update importance scores of incremental matrices and allocate budget accordingly. 
   ```python
-  from loralib import RankAllocator
-  from loralib import compute_orth_regu 
+  from adaloralib import RankAllocator
+  from adaloralib import compute_orth_regu 
   # Initialize the RankAllocator 
   rankallocator = RankAllocator(
       model, lora_r=12, target_rank=8,

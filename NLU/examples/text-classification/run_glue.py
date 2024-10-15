@@ -45,7 +45,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from loralib import RankAllocator 
+from adaloralib import RankAllocator 
 
 try:
     from torch.utils.tensorboard import SummaryWriter

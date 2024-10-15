@@ -14,7 +14,7 @@
 # limitations under the License.
 """ PyTorch DeBERTa-v2 model."""
 
-import loralib as lora
+import adaloralib as lora
 import math
 from collections.abc import Sequence
 from typing import Optional, Tuple, Union
