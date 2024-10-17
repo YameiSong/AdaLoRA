@@ -369,20 +369,25 @@ def main():
     else:
         # Loading a dataset from your local files.
         # CSV/JSON training and evaluation files are needed.
-        data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
-
-        # Get the test dataset: you can provide your own CSV/JSON test file (see below)
-        # when you use `do_predict` without specifying a GLUE benchmark task.
-        if training_args.do_predict:
-            if data_args.test_file is not None:
-                train_extension = data_args.train_file.split(".")[-1]
-                test_extension = data_args.test_file.split(".")[-1]
-                assert (
-                    test_extension == train_extension
-                ), "`test_file` should have the same extension (csv or json) as `train_file`."
-                data_files["test"] = data_args.test_file
-            else:
-                raise ValueError("Need either a GLUE task or a test file for `do_predict`.")
+        if data_args.task_name == "mnli":
+            data_files = {"train": data_args.train_file, "validation_matched": data_args.validation_file}
+            if training_args.do_predict:
+                if data_args.test_file is not None:
+                    data_files["test_matched"] = data_args.test_file
+        else:
+            data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
+            # Get the test dataset: you can provide your own CSV/JSON test file (see below)
+            # when you use `do_predict` without specifying a GLUE benchmark task.
+            if training_args.do_predict:
+                if data_args.test_file is not None:
+                    train_extension = data_args.train_file.split(".")[-1]
+                    test_extension = data_args.test_file.split(".")[-1]
+                    assert (
+                        test_extension == train_extension
+                    ), "`test_file` should have the same extension (csv or json) as `train_file`."
+                    data_files["test"] = data_args.test_file
+                else:
+                    raise ValueError("Need either a GLUE task or a test file for `do_predict`.")
 
         for key in data_files.keys():
             logger.info(f"load a local file for {key}: {data_files[key]}")
