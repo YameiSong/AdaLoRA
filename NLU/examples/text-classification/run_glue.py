@@ -370,10 +370,15 @@ def main():
         # Loading a dataset from your local files.
         # CSV/JSON training and evaluation files are needed.
         if data_args.task_name == "mnli":
-            data_files = {"train": data_args.train_file, "validation_matched": data_args.validation_file}
+            data_files = {
+                "train": data_args.train_file, 
+                "validation_matched": data_args.validation_file,
+                "validation_mismatched": data_args.validation_file.replace("_matched", "_mismatched"),
+            }
             if training_args.do_predict:
                 if data_args.test_file is not None:
                     data_files["test_matched"] = data_args.test_file
+                    data_files["test_mismatched"] = data_args.test_file.replace("_matched", "_mismatched")
         else:
             data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
             # Get the test dataset: you can provide your own CSV/JSON test file (see below)
