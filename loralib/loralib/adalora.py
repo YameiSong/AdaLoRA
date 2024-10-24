@@ -328,6 +328,7 @@ class RankAllocator(object):
             if self.tb_writter is not None and self.global_step%self.log_interval==0:
                 self.tb_writter.add_scalar("Budget/total_rank", curr_sum_rank, self.global_step)
                 self.tb_writter.add_scalar("Budget/mask_threshold", mask_threshold, self.global_step)
+                # === sum_param is the total number of trainable parameters in the model
                 self.tb_writter.add_scalar("Budget/sum_param", sum_param, self.global_step)
 
         return mask_threshold
